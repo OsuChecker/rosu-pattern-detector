@@ -2,7 +2,7 @@
 name = "pdetector"
 version = "0.1.0"
 edition = "2021"
-
+authors = ["Osef0760 <osefcode@gmail.com"]
 
 [dependencies]
 pyo3 = { version = "0.20", features = ["extension-module"] }

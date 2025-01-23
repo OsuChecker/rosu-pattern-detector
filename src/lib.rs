@@ -8,6 +8,7 @@ use rosu_map::section::hit_objects::{HitObject, HitObjectKind};
 use rosu_map::section::timing_points::TimingPoint;
 use reqwest::blocking;
 use std::error::Error;
+use serde_json::json;
 use serde_json::Value::Null;
 
 /// Module principal à exposer pour Python
@@ -139,7 +140,6 @@ fn analyze_patterns_by_measures_advanced(
         .sum::<f64>()
         / if measure_count > 0 { measure_count as f64 } else { 1.0 };
 
-    println!("NPM moyen : {}", average_npm);
 
     // Puissance utilisée pour amplifier les poids
     let amplification_power: f64 = 1.0;
@@ -263,13 +263,15 @@ fn get_map(url : &str) -> PyResult<String>{
     let (jack_count, jumpstream_count, singlestream_count, handstream_count) =
         analyze_patterns_by_measures_advanced(&mut mesure);
 
-    println!("Jacks: {}", jack_count);
-    println!("Jumpstreams: {}", jumpstream_count);
-    println!("Single streams: {}", singlestream_count);
-    println!("Handstreams: {}", handstream_count);
+    // Convertir les résultats en JSON
+    let result_json = json!({
+        "jack": jack_count,
+        "jumpstream": jumpstream_count,
+        "singlestream": singlestream_count,
+        "handstream": handstream_count
+    });
 
-
-    Ok("test".parse()?)
+    Ok(result_json.to_string())
 }
 
 
