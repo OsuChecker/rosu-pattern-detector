@@ -199,7 +199,8 @@ pub(crate) fn group_notes_by_measures(notes: Vec<Notes>, timing_points: Vec<Timi
             .iter()
             .rev()
             .find(|tp| note.timestamp >= tp.time as i32)
-            .expect("Un timing point doit correspondre");
+            .unwrap_or_else(|| timing_points.first().expect("La liste des timing points ne doit pas être vide"));
+
 
         // Calculer la mesure correspondante
         let beat_len: f32 = timing_point.beat_len as f32; // Assurez-vous que beat_len est un f32

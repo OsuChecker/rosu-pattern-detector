@@ -29,7 +29,7 @@ pub fn download_file(url: &str) -> Result<String, Box<dyn Error>> {
 fn get_map(url: &str) -> PyResult<String> {
     let path = download_file(url).unwrap();
     let map = rosu_map::from_str::<Beatmap>(&path).unwrap();
-    if (map.mode != rosu_map::section::general::GameMode::Mania) {
+    if (map.mode == rosu_map::section::general::GameMode::Mania) {
         let timing_point = map.control_points.timing_points;
 
         let notes = mania::transform_ho_to_mania_notes(map.hit_objects);
@@ -44,10 +44,15 @@ fn get_map(url: &str) -> PyResult<String> {
             "singlestream": singlestream_count,
             "handstream": handstream_count
         });
+        Ok(result_json.to_string())
     } else {
-        return Ok("".to_string());
+        match map.mode{
+            rosu_map::section::general::GameMode::Mania => Ok("Mania".to_string()),
+            rosu_map::section::general::GameMode::Osu => Ok("Osu".to_string()),
+            rosu_map::section::general::GameMode::Taiko => Ok("Taiko".to_string()),
+            rosu_map::section::general::GameMode::Catch => Ok("Catch".to_string()),
+        }
     }
-    Ok(result_json.to_string())
 }
 
 #[pymodule]
