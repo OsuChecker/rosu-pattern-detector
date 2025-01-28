@@ -3,9 +3,9 @@ use std::collections::{BTreeMap, HashMap};
 use rosu_map;
 use rosu_map::section::hit_objects::{HitObject, HitObjectKind};
 use rosu_map::section::timing_points::TimingPoint;
-use crate::mania::TertiaryPattern::{DENSE_CHORDJACK, LIGHT_CHORDJACK, QUADSTREAM, SPEEDJACK};
 use std::hash::Hash;
 use std::fmt;
+use serde_json::Value::Null;
 
 #[derive(Debug, Clone)]
 pub struct Notes {
@@ -35,9 +35,9 @@ pub enum SecondaryPattern{
 #[derive(Debug, Hash, PartialEq, Ord, Eq, Clone, PartialOrd)]
 pub enum TertiaryPattern{
     DENSE_CHORDJACK,
-    LIGHT_CHORDJACK,
+    CHORDJACK,
     SPEEDJACK,
-    QUADSTREAM,
+    CHORDSTREAM,
     None
 }
 
@@ -54,19 +54,47 @@ impl Measure {
         &self.notes
     }
 }
+impl Measure {
+    pub fn print_notes(&self) {
+        for note in &self.notes {
+            let line = note.to_display_string();
+            println!("{}", line);
+        }
+    }
+}
+
+impl Notes {
+    pub fn to_display_string(&self) -> String {
+        self.notes
+            .iter()
+            .map(|&active| if active { 'O' } else { 'X' })
+            .collect()
+    }
+}
 
 impl fmt::Display for TertiaryPattern {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             TertiaryPattern::DENSE_CHORDJACK => write!(f, "Dense Chordjack"),
-            TertiaryPattern::LIGHT_CHORDJACK => write!(f, "Light Chordjack"),
+            TertiaryPattern::CHORDJACK => write!(f, "Chordjack"),
             TertiaryPattern::SPEEDJACK => write!(f, "Speedjack"),
-            TertiaryPattern::QUADSTREAM => write!(f, "Quadstream"),
+            TertiaryPattern::CHORDSTREAM => write!(f, "ChordStream"),
             TertiaryPattern::None => write!(f, "None"),
         }
     }
 }
 
+impl fmt::Display for SecondaryPattern {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            SecondaryPattern::Jumpstream => write!(f, "JS"),
+            SecondaryPattern::Jack => write!(f, "Jack"),
+            SecondaryPattern::Handstream => write!(f, "HS"),
+            SecondaryPattern::Singlestream => write!(f, "SS"),
+            SecondaryPattern::None => write!(f, "None"),
+        }
+    }
+}
 
 fn detect_pattern(note: &Notes) -> BasePattern {
     // Compter combien de `true` il y a parmi les notes
@@ -170,15 +198,16 @@ pub(crate) fn analyze_patterns_by_measures_advanced(
         let mut has_jumpstream = false;
         let mut has_singlestream = false;
         let mut has_handstream = false;
-        // Parcourir les notes de la mesure
+        let mut prev_notes : Notes ;
+        let vec_jack: Vec<i32> = vec![0; measure.notes[0].notes.len()];
         for (i, note) in measure.notes.iter().enumerate() {
-            // Détecter un Jack (même colonne active dans deux notes consécutives)
             if i > 0 {
                 let prev = &measure.notes[i - 1];
                 if note.notes.iter().zip(prev.notes.iter()).any(|(n, p)| *n && *p) {
                     has_jack = true;
                 }
             }
+
 
             // Détection des motifs principaux
             match note.pattern {
@@ -193,6 +222,7 @@ pub(crate) fn analyze_patterns_by_measures_advanced(
         if has_jack {
             jack_count += weight;
             measure.secondary_pattern = SecondaryPattern::Jack;
+
         } else if has_handstream {
             handstream_count += weight;
             measure.secondary_pattern = SecondaryPattern::Handstream;
@@ -203,6 +233,7 @@ pub(crate) fn analyze_patterns_by_measures_advanced(
             singlestream_count += weight;
             measure.secondary_pattern = SecondaryPattern::Singlestream;
         }
+
     }
 
     (jack_count, jumpstream_count, singlestream_count, handstream_count)
@@ -275,7 +306,9 @@ pub(crate) fn analyze_patterns_tertiary(
         // Appliquer le facteur de pondération basé sur la densité
         if measure.secondary_pattern == SecondaryPattern::Jack {
             let key = check_jack(measure);
+            measure.tertiary_pattern = key.clone();
             *map.entry(key).or_insert(0.0) += density_factor;
+
         }
 
 
@@ -296,17 +329,34 @@ fn check_jack(p0: &mut Measure) -> TertiaryPattern {
     let quad = *pattern_count.get(&BasePattern::Quad).unwrap_or(&0);
     let chord = *pattern_count.get(&BasePattern::Chord).unwrap_or(&0);
 
-    if chord + hand > jump + quad
+    if hand > jump
     {
-        DENSE_CHORDJACK
-    } else if quad > 0 && jump + hand + quad >= single
-    {
-        LIGHT_CHORDJACK
+        crate::mania::TertiaryPattern::DENSE_CHORDJACK
     }
-    else if hand+quad > 0  && single > jump {
-        QUADSTREAM
-    } else {
-        SPEEDJACK
+    else if quad > 0 && jump + hand + quad > single
+    {
+        crate::mania::TertiaryPattern::CHORDJACK
+    }
+    else {
+        check_stream_or_speed(p0)
     }
 
 }
+
+fn check_stream_or_speed(measure: &mut Measure) -> TertiaryPattern{
+
+    let mut jack_count = 0; // Nouveau compteur
+
+    for (i, note) in measure.notes.iter().enumerate() {
+        if i > 0 {
+            let prev = &measure.notes[i - 1]; // Obtenir la note précédente
+            if note.notes.iter().zip(prev.notes.iter()).any(|(n, p)| *n && *p) {
+                jack_count += 1; // Incrémenter lorsqu'on détecte un "jack"
+            }
+        }
+    }
+    if jack_count <=1{ crate::mania::TertiaryPattern::CHORDSTREAM }
+    else{ crate::mania::TertiaryPattern::SPEEDJACK }
+}
+
+
