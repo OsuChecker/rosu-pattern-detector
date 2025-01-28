@@ -26,13 +26,13 @@ pub fn download_file(url: &str) -> Result<String, Box<dyn Error>> {
 }
 
 #[pyfunction]
-fn get_map(url: &str) -> PyResult<String> {
-    let path = download_file(url).unwrap();
-    let map = rosu_map::from_str::<Beatmap>(&path).unwrap();
+fn get_map(path: &str) -> PyResult<String> {
+    print!("{:?}", path);
+    let map = rosu_map::from_path::<Beatmap>(&path).unwrap();
     if (map.mode == rosu_map::section::general::GameMode::Mania) {
         let timing_point = map.control_points.timing_points;
 
-        let notes = mania::transform_ho_to_mania_notes(map.hit_objects);
+        let notes = mania::transform_ho_to_mania_notes(map.hit_objects, map.circle_size as usize);
         let mut mesure = mania::group_notes_by_measures(notes, timing_point);
         let (jack_count, jumpstream_count, singlestream_count, handstream_count) =
             mania::analyze_patterns_by_measures_advanced(&mut mesure);
@@ -44,6 +44,12 @@ fn get_map(url: &str) -> PyResult<String> {
             "singlestream": singlestream_count,
             "handstream": handstream_count
         });
+
+        let b = mania::analyze_patterns_tertiary(&mut mesure, map.circle_size as i32);
+
+        for (key, value) in b {
+            println!("{}, {}", key.to_string(), value);
+        }
         Ok(result_json.to_string())
     } else {
         match map.mode{

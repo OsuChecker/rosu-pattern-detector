@@ -1,70 +1,101 @@
 use std::cmp::PartialEq;
-use std::collections::{BTreeMap};
+use std::collections::{BTreeMap, HashMap};
 use rosu_map;
 use rosu_map::section::hit_objects::{HitObject, HitObjectKind};
 use rosu_map::section::timing_points::TimingPoint;
+use crate::mania::TertiaryPattern::{DENSE_CHORDJACK, LIGHT_CHORDJACK, QUADSTREAM, SPEEDJACK};
+use std::hash::Hash;
+use std::fmt;
 
 #[derive(Debug, Clone)]
 pub struct Notes {
     timestamp: i32,
-    note_1: bool,
-    note_2: bool,
-    note_3: bool,
-    note_4: bool,
+    notes: Vec<bool>, // Vecteur de bool pour gérer un nombre variable de notes
     pattern: BasePattern, // Utilise l'enum Pattern
 }
 
-
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum BasePattern {
     Single,
     Jump,
     Hand,
     Quad,
+    Chord,
     None, // Cas où il n'y a aucune note (juste pour la couverture, improbable ici)
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum  SecondaryPattern{
+pub enum SecondaryPattern{
     Jack,
     Handstream,
     Jumpstream,
     Singlestream,
     None
 }
+#[derive(Debug, Hash, PartialEq, Ord, Eq, Clone, PartialOrd)]
+pub enum TertiaryPattern{
+    DENSE_CHORDJACK,
+    LIGHT_CHORDJACK,
+    SPEEDJACK,
+    QUADSTREAM,
+    None
+}
+
 #[derive(Debug)]
 pub struct Measure {
     start_time: i32,
     notes: Vec<Notes>,
     secondary_pattern : SecondaryPattern,
+    tertiary_pattern: TertiaryPattern,
     npm : i32
+}
+impl Measure {
+    fn notes(&self) -> &Vec<Notes> {
+        &self.notes
+    }
+}
+
+impl fmt::Display for TertiaryPattern {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TertiaryPattern::DENSE_CHORDJACK => write!(f, "Dense Chordjack"),
+            TertiaryPattern::LIGHT_CHORDJACK => write!(f, "Light Chordjack"),
+            TertiaryPattern::SPEEDJACK => write!(f, "Speedjack"),
+            TertiaryPattern::QUADSTREAM => write!(f, "Quadstream"),
+            TertiaryPattern::None => write!(f, "None"),
+        }
+    }
 }
 
 
 fn detect_pattern(note: &Notes) -> BasePattern {
     // Compter combien de `true` il y a parmi les notes
-    let count = [
-        note.note_1,
-        note.note_2,
-        note.note_3,
-        note.note_4,
-    ]
-        .iter()
-        .filter(|&&n| n) // Garder les `true`
-        .count();
+    let count = note.notes.iter().filter(|&&n| n).count();
 
-    // Renvoyer le Pattern correspondant
-    match count {
-        1 => BasePattern::Single,
-        2 => BasePattern::Jump,
-        3 => BasePattern::Hand,
-        4 => BasePattern::Quad,
-        _ => BasePattern::None, // Cas par défaut
+    // Fonction interne pour obtenir le pattern correspondant
+    fn get_pattern(number: usize) -> BasePattern {
+        match number {
+            1 => BasePattern::Single,
+            2 => BasePattern::Jump,
+            3 => BasePattern::Hand,
+            4 => BasePattern::Quad,
+            _ => BasePattern::Chord, // Pour 5 ou plus, retourne Chord
+        }
     }
+
+    get_pattern(count)
 }
 
-pub(crate) fn transform_ho_to_mania_notes(hO: Vec<HitObject>) -> Vec<Notes> {
+
+pub(crate) fn transform_ho_to_mania_notes(hO: Vec<HitObject>, num_keys: usize) -> Vec<Notes> {
     let mut notes: Vec<Notes> = Vec::new();
+
+    // Définir les positions des touches en fonction du nombre de touches (4K ou 7K)
+    let positions = match num_keys {
+        4 => vec![64f32, 192f32, 320f32, 448f32], // 4K (quatre touches)
+        7 => vec![36f32, 109f32, 182f32, 256f32, 329f32, 402f32, 475f32], // 7K (sept touches)
+        _ => return notes, // Retourner une liste vide pour des configurations non supportées
+    };
 
     for hO in hO {
         // Obtenez la position basée sur le type d'objet
@@ -76,45 +107,38 @@ pub(crate) fn transform_ho_to_mania_notes(hO: Vec<HitObject>) -> Vec<Notes> {
 
         let timestamp = hO.start_time as i32;
 
-        // Détermine quelle colonne est active
-        let new_note = match pos_x {
-            64f32 => (true, false, false, false),
-            192f32 => (false, true, false, false),
-            320f32 => (false, false, true, false),
-            448f32 => (false, false, false, true),
-            _ => continue, // Ignorer les positions non valides
-        };
+        // Trouver l'indice correspondant dans les positions des touches
+        if let Some(index) = positions.iter().position(|&x| x == pos_x) {
+            // Créer un vecteur de bools en fonction de la position
+            let mut new_note = vec![false; num_keys]; // Initialiser avec `false`
+            new_note[index] = true; // Marquer la note active à l'index correspondant
 
-        // Recherchez une note au même timestamp
-        if let Some(existing_note) = notes.iter_mut().find(|note| note.timestamp == timestamp) {
-            // Mettre à jour les colonnes actives
-            existing_note.note_1 |= new_note.0;
-            existing_note.note_2 |= new_note.1;
-            existing_note.note_3 |= new_note.2;
-            existing_note.note_4 |= new_note.3;
-            existing_note.pattern = detect_pattern(existing_note); // Met à jour le pattern
-        } else {
-            // Sinon, créer une nouvelle note
-            notes.push(Notes {
-                timestamp,
-                note_1: new_note.0,
-                note_2: new_note.1,
-                note_3: new_note.2,
-                note_4: new_note.3,
-                pattern: detect_pattern(&Notes {
+            // Recherchez une note au même timestamp
+            if let Some(existing_note) = notes.iter_mut().find(|note| note.timestamp == timestamp) {
+                // Mettre à jour les colonnes actives
+                for i in 0..num_keys {
+                    existing_note.notes[i] |= new_note[i];
+                }
+                existing_note.pattern = detect_pattern(existing_note); // Met à jour le pattern
+            } else {
+                // Sinon, créer une nouvelle note
+                notes.push(Notes {
                     timestamp,
-                    note_1: new_note.0,
-                    note_2: new_note.1,
-                    note_3: new_note.2,
-                    note_4: new_note.3,
-                    pattern: BasePattern::None,
-                }),
-            });
+                    notes: new_note.clone(), // Clone pour éviter de déplacer new_note
+                    pattern: detect_pattern(&Notes {
+                        timestamp,
+                        notes: new_note.clone(),
+                        pattern: BasePattern::None,
+                    }),
+                });
+            }
         }
     }
 
     notes
 }
+
+
 pub(crate) fn analyze_patterns_by_measures_advanced(
     grouped_measures: &mut BTreeMap<i32, Measure>,
 ) -> (f64, f64, f64, f64) {
@@ -131,11 +155,10 @@ pub(crate) fn analyze_patterns_by_measures_advanced(
         .sum::<f64>()
         / if measure_count > 0 { measure_count as f64 } else { 1.0 };
 
-
     // Puissance utilisée pour amplifier les poids
     let amplification_power: f64 = 1.0;
 
-    // Étape 2 : Analyse des mesures
+    // Étape 2 : Analyse des mesuresp0
     for measure in grouped_measures.values_mut() {
         // Calculer la pondération actuelle avec amplification si average_npm > 0.0
         let weight = if average_npm > 0.0 {
@@ -143,22 +166,16 @@ pub(crate) fn analyze_patterns_by_measures_advanced(
         } else {
             1.0 // Si le NPM moyen est zéro, pas de pondération spéciale
         };
-
         let mut has_jack = false;
         let mut has_jumpstream = false;
         let mut has_singlestream = false;
         let mut has_handstream = false;
-
         // Parcourir les notes de la mesure
         for (i, note) in measure.notes.iter().enumerate() {
             // Détecter un Jack (même colonne active dans deux notes consécutives)
             if i > 0 {
                 let prev = &measure.notes[i - 1];
-                if (note.note_1 && prev.note_1)
-                    || (note.note_2 && prev.note_2)
-                    || (note.note_3 && prev.note_3)
-                    || (note.note_4 && prev.note_4)
-                {
+                if note.notes.iter().zip(prev.notes.iter()).any(|(n, p)| *n && *p) {
                     has_jack = true;
                 }
             }
@@ -190,6 +207,7 @@ pub(crate) fn analyze_patterns_by_measures_advanced(
 
     (jack_count, jumpstream_count, singlestream_count, handstream_count)
 }
+
 pub(crate) fn group_notes_by_measures(notes: Vec<Notes>, timing_points: Vec<TimingPoint>) -> BTreeMap<i32, Measure> {
     let mut measures: BTreeMap<i32, Measure> = BTreeMap::new();
 
@@ -201,10 +219,9 @@ pub(crate) fn group_notes_by_measures(notes: Vec<Notes>, timing_points: Vec<Timi
             .find(|tp| note.timestamp >= tp.time as i32)
             .unwrap_or_else(|| timing_points.first().expect("La liste des timing points ne doit pas être vide"));
 
-
         // Calculer la mesure correspondante
         let beat_len: f32 = timing_point.beat_len as f32; // Assurez-vous que beat_len est un f32
-        let start_time: i32 = timing_point.time as i32; // `start_time` est un entier (i32)
+        let start_time: i32 = timing_point.time as i32; // start_time est un entier (i32)
 
         let measure_idx = ((note.timestamp - start_time) as f32 / beat_len).floor() as i32;
         let measure_start_time = start_time + (measure_idx as f32 * beat_len) as i32;
@@ -214,6 +231,7 @@ pub(crate) fn group_notes_by_measures(notes: Vec<Notes>, timing_points: Vec<Timi
             start_time: measure_start_time,
             notes: Vec::new(),
             secondary_pattern: SecondaryPattern::None,
+            tertiary_pattern: TertiaryPattern::None,
             npm: 0, // Initialisation du compteur de notes par mesure
         });
 
@@ -221,14 +239,74 @@ pub(crate) fn group_notes_by_measures(notes: Vec<Notes>, timing_points: Vec<Timi
         measure_entry.notes.push(note.clone());
 
         // Calculer le nombre de "notes actives" pour ajouter au compteur NPM
-        let active_notes = note.note_1 as i32
-            + note.note_2 as i32
-            + note.note_3 as i32
-            + note.note_4 as i32;
+        let active_notes = note.notes.iter().filter(|&&n| n).count() as i32;
 
         // Ajouter au total des notes par mesure (NPM)
         measure_entry.npm += active_notes;
     }
 
     measures
+}
+
+pub(crate) fn analyze_patterns_tertiary(
+    grouped_measures: &mut BTreeMap<i32, Measure>, key : i32
+) -> BTreeMap<TertiaryPattern, f64> {
+    let mut map : BTreeMap<TertiaryPattern,f64> =  BTreeMap::new();
+    // Étape 1 : Calculer le NPM moyen
+    let measure_count = grouped_measures.len();
+    let average_npm = grouped_measures
+        .values()
+        .map(|measure| measure.npm as f64)
+        .sum::<f64>()
+        / if measure_count > 0 { measure_count as f64 } else { 1.0 };
+
+    // Puissance utilisée pour amplifier les poids
+    let amplification_power: f64 = 1.0;
+
+    // Étape 2 : Analyse des mesures
+    for measure in grouped_measures.values_mut() {
+        // Calculer la pondération actuelle avec amplification si average_npm > 0.0
+        let density_factor = if average_npm > 0.0 {
+            measure.npm as f64 / average_npm
+        } else {
+            1.0 // Si le NPM moyen est zéro, densité neutre
+        };
+
+        // Appliquer le facteur de pondération basé sur la densité
+        if measure.secondary_pattern == SecondaryPattern::Jack {
+            let key = check_jack(measure);
+            *map.entry(key).or_insert(0.0) += density_factor;
+        }
+
+
+    }
+
+    map
+}
+
+fn check_jack(p0: &mut Measure) -> TertiaryPattern {
+    let mut pattern_count: HashMap<BasePattern, usize> = HashMap::new();
+
+    for note in p0.notes() {
+        *pattern_count.entry(note.pattern.clone()).or_insert(0) += 1;
+    }
+    let single = *pattern_count.get(&BasePattern::Single).unwrap_or(&0);
+    let jump = *pattern_count.get(&BasePattern::Jump).unwrap_or(&0);
+    let hand = *pattern_count.get(&BasePattern::Hand).unwrap_or(&0);
+    let quad = *pattern_count.get(&BasePattern::Quad).unwrap_or(&0);
+    let chord = *pattern_count.get(&BasePattern::Chord).unwrap_or(&0);
+
+    if chord + hand > jump + quad
+    {
+        DENSE_CHORDJACK
+    } else if quad > 0 && jump + hand + quad >= single
+    {
+        LIGHT_CHORDJACK
+    }
+    else if hand+quad > 0  && single > jump {
+        QUADSTREAM
+    } else {
+        SPEEDJACK
+    }
+
 }
