@@ -5,6 +5,7 @@ edition = "2021"
 authors = ["Osef0760 <osefcode@gmail.com"]
 
 [dependencies]
+openssl = "0.10.70"
 pyo3 = { version = "0.20", features = ["extension-module"] }
 rosu-map = "0.2.0"
 reqwest = { version = "0.12.12", features = ["blocking"] }
