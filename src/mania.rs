@@ -1,4 +1,4 @@
-use std::cmp::PartialEq;
+use std::cmp::{max, PartialEq};
 use std::collections::{BTreeMap, HashMap};
 use rosu_map;
 use rosu_map::section::hit_objects::{HitObject, HitObjectKind};
@@ -6,6 +6,7 @@ use rosu_map::section::timing_points::TimingPoint;
 use std::hash::Hash;
 use std::fmt;
 use serde_json::Value::Null;
+use crate::mania::TertiaryPattern::{ANCHOR_JS, JS, LIGHT_JS};
 
 #[derive(Debug, Clone)]
 pub struct Notes {
@@ -38,6 +39,9 @@ pub enum TertiaryPattern{
     CHORDJACK,
     SPEEDJACK,
     CHORDSTREAM,
+    LIGHT_JS,
+    ANCHOR_JS,
+    JS,
     None
 }
 
@@ -79,6 +83,9 @@ impl fmt::Display for TertiaryPattern {
             TertiaryPattern::CHORDJACK => write!(f, "Chordjack"),
             TertiaryPattern::SPEEDJACK => write!(f, "Speedjack"),
             TertiaryPattern::CHORDSTREAM => write!(f, "ChordStream"),
+            TertiaryPattern::LIGHT_JS => write!(f, "Light JS"),
+            TertiaryPattern::ANCHOR_JS => write!(f, "Anchor JS"),
+            TertiaryPattern::JS => write!(f, "JS"),
             TertiaryPattern::None => write!(f, "None"),
         }
     }
@@ -298,7 +305,7 @@ pub(crate) fn analyze_patterns_tertiary(
     for measure in grouped_measures.values_mut() {
         // Calculer la pondération actuelle avec amplification si average_npm > 0.0
         let density_factor = if average_npm > 0.0 {
-            measure.npm as f64 / average_npm
+            (measure.npm as f64 / average_npm)*0.8
         } else {
             1.0 // Si le NPM moyen est zéro, densité neutre
         };
@@ -310,10 +317,13 @@ pub(crate) fn analyze_patterns_tertiary(
             *map.entry(key).or_insert(0.0) += density_factor;
 
         }
-
-
+        else if measure.secondary_pattern == SecondaryPattern::Jumpstream
+        {
+            let key = check_js(measure);
+            measure.tertiary_pattern = key.clone();
+            *map.entry(key).or_insert(0.0) += density_factor;   
+        }
     }
-
     map
 }
 
@@ -338,12 +348,12 @@ fn check_jack(p0: &mut Measure) -> TertiaryPattern {
         crate::mania::TertiaryPattern::CHORDJACK
     }
     else {
-        check_stream_or_speed(p0)
+        check_jackspeed_or_chordstream(p0)
     }
 
 }
 
-fn check_stream_or_speed(measure: &mut Measure) -> TertiaryPattern{
+fn check_jackspeed_or_chordstream(measure: &mut Measure) -> TertiaryPattern{
 
     let mut jack_count = 0; // Nouveau compteur
 
@@ -355,8 +365,48 @@ fn check_stream_or_speed(measure: &mut Measure) -> TertiaryPattern{
             }
         }
     }
-    if jack_count <=1{ crate::mania::TertiaryPattern::CHORDSTREAM }
-    else{ crate::mania::TertiaryPattern::SPEEDJACK }
+    if jack_count <=1
+    {
+        crate::mania::TertiaryPattern::CHORDSTREAM
+    }
+    else
+    {
+        crate::mania::TertiaryPattern::SPEEDJACK
+    }
+}
+
+fn check_js(measure: &mut Measure) -> TertiaryPattern {
+    let mut pattern_count: HashMap<BasePattern, usize> = HashMap::new();
+
+    for note in measure.notes() {
+        *pattern_count.entry(note.pattern.clone()).or_insert(0) += 1;
+    }
+    let single = *pattern_count.get(&BasePattern::Single).unwrap_or(&0);
+    let jump = *pattern_count.get(&BasePattern::Jump).unwrap_or(&0);
+
+        let mut vect_int = vec![0; measure.notes[0].notes.len()];
+
+        for (i, note) in measure.notes.iter().enumerate() {
+            for (i, &is_active) in note.notes.iter().enumerate() {
+                if is_active {
+                    vect_int[i] += 1;
+                }
+            }
+        }
+
+        println!("{:?}", vect_int);
+    if let Some(&max_value) = vect_int.iter().max() {
+        if max_value > 3 {
+            return TertiaryPattern::ANCHOR_JS;
+        } else if jump < single {
+            TertiaryPattern::LIGHT_JS
+        } else {
+            TertiaryPattern::JS
+        }
+    }
+    else{
+        JS
+    }
 }
 
 
