@@ -1,18 +1,12 @@
+mod structs;
 mod mania;
 
 use pyo3::prelude::*;
 use reqwest::blocking;
 use rosu_map;
-use rosu_map::section::hit_objects::{HitObject, HitObjectKind};
-use rosu_map::section::timing_points::TimingPoint;
-use rosu_map::section::Section::Mania;
 use rosu_map::Beatmap;
-use serde_json::json;
-use serde_json::Value::Null;
 use std::cmp::PartialEq;
-use std::collections::{BTreeMap, HashMap};
 use std::error::Error;
-use std::iter::Map;
 
 /// Module principal à exposer pour Python
 
@@ -30,26 +24,7 @@ fn get_map(path: &str) -> PyResult<String> {
     print!("{:?}", path);
     let map = rosu_map::from_path::<Beatmap>(&path).unwrap();
     if (map.mode == rosu_map::section::general::GameMode::Mania) {
-        let timing_point = map.control_points.timing_points;
-
-        let notes = mania::transform_ho_to_mania_notes(map.hit_objects, map.circle_size as usize);
-        let mut mesure = mania::group_notes_by_measures(notes, timing_point);
-        let (jack_count, jumpstream_count, singlestream_count, handstream_count) =
-            mania::analyze_patterns_by_measures_advanced(&mut mesure);
-
-        // Convertir les résultats en JSON
-        let result_json = json!({
-            "jack": jack_count,
-            "jumpstream": jumpstream_count,
-            "singlestream": singlestream_count,
-            "handstream": handstream_count
-        });
-
-        let b = mania::analyze_patterns_tertiary(&mut mesure, map.circle_size as i32);
-
-        for (key, value) in b {
-            println!("{}, {}", key.to_string(), value);
-        }
+        let result_json = crate::mania::transformers(map);
         Ok(result_json.to_string())
     } else {
         match map.mode{
