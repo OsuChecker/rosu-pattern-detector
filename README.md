@@ -1,3 +1,6 @@
+
+# OUTDATED I NEED TO UPDATE IT DONT READ IT
+
 # **osu! Pattern Detector**
 
 `pdetector` is a Rust-based library designed to analyze patterns in osu! beatmaps. It currently supports **osu!mania** mode exclusively, focusing on detecting specific **secondary patterns** such as **Jack**, **Jumpstream**, **Singlestream**, and **Handstream**. While osu!mania is the only mode supported right now, the project intends to evolve into a universal tool for analyzing all osu! game modes.
