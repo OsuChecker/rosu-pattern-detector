@@ -1,5 +1,7 @@
 mod structs;
 mod mania;
+mod std;
+mod taiko;
 
 use pyo3::prelude::*;
 use reqwest::blocking;
@@ -7,8 +9,6 @@ use rosu_map;
 use rosu_map::Beatmap;
 use std::cmp::PartialEq;
 use std::error::Error;
-
-/// Module principal à exposer pour Python
 
 pub fn download_file(url: &str) -> Result<String, Box<dyn Error>> {
     let response = blocking::get(url)?;
@@ -25,6 +25,10 @@ fn get_map(path: &str) -> PyResult<String> {
     let map = rosu_map::from_path::<Beatmap>(&path).unwrap();
     if (map.mode == rosu_map::section::general::GameMode::Mania) {
         let result_json = crate::mania::transformers(map);
+        Ok(result_json.to_string())
+    } else if (map.mode == rosu_map::section::general::GameMode::Osu)
+    {
+        let result_json = crate::std::transformers(map);
         Ok(result_json.to_string())
     } else {
         match map.mode{
