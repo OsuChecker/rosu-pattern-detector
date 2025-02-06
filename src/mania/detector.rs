@@ -118,10 +118,7 @@ pub(crate) fn analyze_patterns_tertiary(
         }
         else if measure.secondary_pattern==SecondaryPattern::Handstream{
             let key = check_hs(measure);
-            *map.entry(key.clone()).or_insert(0.0) += density_factor;
-
-            measure.print_notes();
-            println!("{}, {}", key.to_string(), density_factor);
+            *map.entry(key).or_insert(0.0) += density_factor;
         }
 
     }
@@ -139,26 +136,14 @@ fn check_hs(measure: &mut ManiaMeasure) -> TertiaryPattern {
     let jump = *pattern_count.get(&BasePattern::Jump).unwrap_or(&0);
     let hand = *pattern_count.get(&BasePattern::Hand).unwrap_or(&0);
 
-    let mut vect_int = vec![0; measure.notes[0].notes.len()];
-
-    for (i, note) in measure.notes.iter().enumerate() {
-        for (i, &is_active) in note.notes.iter().enumerate() {
-            if is_active {
-                vect_int[i] += 1;
-            }
-        }
+    if jump==0{
+        TertiaryPattern::LIGHT_HS
+    } 
+    else if jump>0 {
+            TertiaryPattern::DENSE_HS
     }
-
-    if let Some(&max_value) = vect_int.iter().max() {
-        if max_value > 3 {
-            TertiaryPattern::ANCHOR_HS
-        } else if jump < single {
-            TertiaryPattern::LIGHT_JS
-        } else {
-            TertiaryPattern::JS
-        }
-    } else {
-        TertiaryPattern::JS
+    else {
+        TertiaryPattern::HS
     }
 }
 

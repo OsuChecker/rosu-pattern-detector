@@ -1,4 +1,5 @@
 use std::fmt;
+use serde::ser::{Serialize, Serializer};
 
 #[derive(Debug, Clone)]
 pub struct Notes {
@@ -59,6 +60,7 @@ pub enum TertiaryPattern
     LIGHT_HS,
     ANCHOR_HS,
     DENSE_HS,
+    HS,
     None,
 }
 impl fmt::Display for TertiaryPattern {
@@ -75,10 +77,20 @@ impl fmt::Display for TertiaryPattern {
             TertiaryPattern::ANCHOR_HS => write!(f, "Anchor HS"),
             TertiaryPattern::LIGHT_HS => write!(f, "Light HS"),
             TertiaryPattern::DENSE_HS => write!(f, "Dense HS"),
+            TertiaryPattern::HS => write!(f, "HS"),
             TertiaryPattern::None => write!(f, "None"),
         }
     }
 }
+impl Serialize for TertiaryPattern {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
 #[derive(Debug)]
 pub struct ManiaMeasure {
     pub(crate) measure: crate::structs::CommonMeasure,
