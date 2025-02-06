@@ -15,5 +15,5 @@ pub fn transformers(map: Beatmap) -> serde_json::Value {
     let mut mesure = group_notes_by_measures(notes, timing_point);
     let Hash = detect_secondary_pattern(&mut mesure);
     let result_json = json!(Hash);
-    combined
+    result_json
 }

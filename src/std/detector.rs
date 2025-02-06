@@ -47,7 +47,8 @@ pub fn detect_secondary_pattern(measures: &mut BTreeMap<i32, StdMeasure>) -> Has
             1.0
         };
 
-        if avg_dist < 15.0 {
+
+        if avg_dist < global_avg_distance {
             *pattern_map.get_mut(&SecondaryPattern::STREAM).unwrap() += 1f64;
         } else {
             *pattern_map.get_mut(&SecondaryPattern::JUMP).unwrap() += 1f64;

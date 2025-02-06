@@ -3,12 +3,11 @@ mod mania;
 mod std;
 mod taiko;
 
+use ::std::error::Error;
 use pyo3::prelude::*;
 use reqwest::blocking;
 use rosu_map;
 use rosu_map::Beatmap;
-use std::cmp::PartialEq;
-use std::error::Error;
 
 pub fn download_file(url: &str) -> Result<String, Box<dyn Error>> {
     let response = blocking::get(url)?;
