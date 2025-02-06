@@ -18,6 +18,5 @@ pub fn transformers(map: Beatmap) -> serde_json::Value {
     for (key, value) in b {
         println!("{}, {}", key.to_string(), value);
     }
-
     result_json
 }

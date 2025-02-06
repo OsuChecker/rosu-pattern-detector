@@ -1,5 +1,6 @@
 use crate::mania::structs::{BasePattern, ManiaMeasure, SecondaryPattern, TertiaryPattern};
 use std::collections::{BTreeMap, HashMap};
+use crate::mania::structs::TertiaryPattern::JT;
 
 pub(crate) fn detect_primary_pattern_4k(note: &crate::mania::structs::Notes) -> BasePattern {
     let count = note.notes.iter().filter(|&&n| n).count();
@@ -108,16 +109,58 @@ pub(crate) fn analyze_patterns_tertiary(
             let key = check_jack(measure);
             measure.tertiary_pattern = key.clone();
             *map.entry(key).or_insert(0.0) += density_factor;
+
         } else if measure.secondary_pattern == SecondaryPattern::Jumpstream {
             let key = check_js(measure);
             measure.tertiary_pattern = key.clone();
             *map.entry(key).or_insert(0.0) += density_factor;
+
         }
+        else if measure.secondary_pattern==SecondaryPattern::Handstream{
+            let key = check_hs(measure);
+            *map.entry(key.clone()).or_insert(0.0) += density_factor;
+
+            measure.print_notes();
+            println!("{}, {}", key.to_string(), density_factor);
+        }
+
     }
 
     map
 }
 
+fn check_hs(measure: &mut ManiaMeasure) -> TertiaryPattern {
+    let mut pattern_count: HashMap<BasePattern, usize> = HashMap::new();
+
+    for note in measure.notes() {
+        *pattern_count.entry(note.pattern.clone()).or_insert(0) += 1;
+    }
+    let single = *pattern_count.get(&BasePattern::Single).unwrap_or(&0);
+    let jump = *pattern_count.get(&BasePattern::Jump).unwrap_or(&0);
+    let hand = *pattern_count.get(&BasePattern::Hand).unwrap_or(&0);
+
+    let mut vect_int = vec![0; measure.notes[0].notes.len()];
+
+    for (i, note) in measure.notes.iter().enumerate() {
+        for (i, &is_active) in note.notes.iter().enumerate() {
+            if is_active {
+                vect_int[i] += 1;
+            }
+        }
+    }
+
+    if let Some(&max_value) = vect_int.iter().max() {
+        if max_value > 3 {
+            TertiaryPattern::ANCHOR_HS
+        } else if jump < single {
+            TertiaryPattern::LIGHT_JS
+        } else {
+            TertiaryPattern::JS
+        }
+    } else {
+        TertiaryPattern::JS
+    }
+}
 
 fn check_jack(p0: &mut ManiaMeasure) -> TertiaryPattern {
     let mut pattern_count: HashMap<BasePattern, usize> = HashMap::new();
@@ -131,13 +174,15 @@ fn check_jack(p0: &mut ManiaMeasure) -> TertiaryPattern {
     let quad = *pattern_count.get(&BasePattern::Quad).unwrap_or(&0);
     let chord = *pattern_count.get(&BasePattern::Chord).unwrap_or(&0);
 
-    if hand > jump
+    if hand > jump+single
     {
         TertiaryPattern::DENSE_CHORDJACK
-    } else if quad > 0 && jump + hand + quad > single
+    }
+    else if quad > 0 && jump + hand + quad > single
     {
         TertiaryPattern::CHORDJACK
-    } else {
+    }
+    else {
         check_jackspeed_or_chordstream(p0)
     }
 }
@@ -152,15 +197,20 @@ fn check_jackspeed_or_chordstream(measure: &mut ManiaMeasure) -> TertiaryPattern
             }
         }
     }
-    if jack_count <= 1
+    if jack_count <= 1 && measure.tNotes()>6
     {
         TertiaryPattern::CHORDSTREAM
+
     } else {
         TertiaryPattern::SPEEDJACK
     }
 }
 
 fn check_js(measure: &mut ManiaMeasure) -> TertiaryPattern {
+
+    if (has_two_consecutive_jumps(measure)) {
+        return JT
+    }
     let mut pattern_count: HashMap<BasePattern, usize> = HashMap::new();
 
     for note in measure.notes() {
@@ -179,7 +229,6 @@ fn check_js(measure: &mut ManiaMeasure) -> TertiaryPattern {
         }
     }
 
-    println!("{:?}", vect_int);
     if let Some(&max_value) = vect_int.iter().max() {
         if max_value > 3 {
             return TertiaryPattern::ANCHOR_JS;
@@ -191,4 +240,12 @@ fn check_js(measure: &mut ManiaMeasure) -> TertiaryPattern {
     } else {
         TertiaryPattern::JS
     }
+}
+
+fn has_two_consecutive_jumps(measure: &ManiaMeasure) -> bool {
+    measure.notes
+        .windows(2)
+        .any(|pair| {
+            pair.iter().all(|note| matches!(note.pattern, BasePattern::Jump))
+        })
 }

@@ -56,6 +56,9 @@ pub enum TertiaryPattern
     ANCHOR_JS,
     JS,
     JT,
+    LIGHT_HS,
+    ANCHOR_HS,
+    DENSE_HS,
     None,
 }
 impl fmt::Display for TertiaryPattern {
@@ -69,6 +72,9 @@ impl fmt::Display for TertiaryPattern {
             TertiaryPattern::ANCHOR_JS => write!(f, "Anchor JS"),
             TertiaryPattern::JS => write!(f, "JS"),
             TertiaryPattern::JT => write!(f, "JT"),
+            TertiaryPattern::ANCHOR_HS => write!(f, "Anchor HS"),
+            TertiaryPattern::LIGHT_HS => write!(f, "Light HS"),
+            TertiaryPattern::DENSE_HS => write!(f, "Dense HS"),
             TertiaryPattern::None => write!(f, "None"),
         }
     }
@@ -91,6 +97,16 @@ impl ManiaMeasure {
             println!("{}", line);
         }
     }
+
+    pub fn tNotes(&self) -> i32
+    {
+        self.notes
+            .iter()
+            .flat_map(|v| v.notes.iter())
+            .filter(|&&b| b)
+            .count() as i32
+    }
+
 }
 
 
