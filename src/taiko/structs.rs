@@ -7,6 +7,14 @@ pub struct Notes {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum BasePattern {
-    SINGLE,
-    SLIDERS,
+    DON,
+    KA,
+    DOUBLEDON,
+    DOUBLEKA
+}
+
+pub enum SecondaryPattern{
+    STREAM,
+    TRILL,
+    KAI,
 }
