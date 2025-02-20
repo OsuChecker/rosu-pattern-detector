@@ -1,24 +1,21 @@
-use crate::mania::detector::{analyze_patterns_by_measures_advanced, analyze_patterns_tertiary};
-use crate::mania::transform::{group_notes_by_measures, transform_hit_object_to_mania_notes};
+use std::collections::{BTreeMap, HashMap};
+use std::hash::Hash;
 use rosu_map::Beatmap;
+use rosu_map::section::timing_points::{TimingPoint, TimingPoints};
 use serde_json::json;
-
+use crate::mania::detector::{analyze_patterns_by_measures_advanced, analyze_patterns_tertiary};
+use crate::mania::structs::{ManiaMeasure, Notes, SecondaryPattern, TertiaryPattern};
+use crate::mania::transform::{group_notes_by_measures, transform_hit_object_to_mania_notes};
 mod structs;
 mod detector;
 mod transform;
 
-pub fn transformers(map: Beatmap) -> serde_json::Value {
-    let timing_point = map.control_points.timing_points;
+pub fn transformers(map: Beatmap) -> (HashMap<SecondaryPattern, f64> ,HashMap<TertiaryPattern, f64> ) {
+    let timing_point : Vec<TimingPoint> = map.control_points.timing_points;
+    let circle_size : i32 = map.circle_size as i32;
 
-    let notes = transform_hit_object_to_mania_notes(map.hit_objects, map.circle_size as usize);
-    let mut mesure = group_notes_by_measures(notes, timing_point);
-    let Hash = analyze_patterns_by_measures_advanced(&mut mesure);
-    let result_json = json!(Hash);
-    let result_json_2 = json!(analyze_patterns_tertiary(&mut mesure, map.circle_size as i32));
-    let combined = json!({
-    "SecondaryPattern": result_json,
-    "TertiaryPattern": result_json_2
-        });
-    combined
+    let notes : Vec<Notes> = transform_hit_object_to_mania_notes(map.hit_objects, circle_size);
+    let mut measures: BTreeMap<i32,ManiaMeasure> = group_notes_by_measures(notes, timing_point);
 
+    (    analyze_patterns_by_measures_advanced(&mut measures), analyze_patterns_tertiary(&mut measures, circle_size))
 }

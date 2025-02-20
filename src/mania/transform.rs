@@ -2,11 +2,15 @@ use rosu_map;
 use rosu_map::section::hit_objects::{HitObject, HitObjectKind};
 use rosu_map::section::timing_points::TimingPoint;
 use std::collections::BTreeMap;
+use crate::mania::detector::detect_primary_pattern_4k;
+use crate::mania::structs::{BasePattern, ManiaMeasure, Notes, SecondaryPattern, TertiaryPattern};
+use crate::structs::CommonMeasure;
 
 pub(crate) fn transform_hit_object_to_mania_notes(
     ho: Vec<HitObject>,
-    num_keys: usize,
-) -> Vec<crate::mania::structs::Notes> {
+    num_keys: i32,
+) -> Vec<Notes> {
+    let num_keys = num_keys as usize;
     let positions = match num_keys {
         4 => vec![64.0, 192.0, 320.0, 448.0],
         7 => vec![36.0, 109.0, 182.0, 256.0, 329.0, 402.0, 475.0],
@@ -29,15 +33,15 @@ pub(crate) fn transform_hit_object_to_mania_notes(
         for &key_index in &indices {
             keys[key_index] = true;
         }
-        let temporary_note = crate::mania::structs::Notes {
+        let temporary_note = Notes {
             timestamp,
             notes: keys.clone(),
-            pattern: crate::mania::structs::BasePattern::None,
+            pattern: BasePattern::None,
         };
-        notes_vec.push(crate::mania::structs::Notes {
+        notes_vec.push(Notes {
             timestamp,
             notes: keys,
-            pattern: crate::mania::detector::detect_primary_pattern_4k(&temporary_note),
+            pattern: detect_primary_pattern_4k(&temporary_note),
         });
     }
     notes_vec
@@ -45,9 +49,9 @@ pub(crate) fn transform_hit_object_to_mania_notes(
 
 
 pub(crate) fn group_notes_by_measures(
-    notes: Vec<crate::mania::structs::Notes>,
+    notes: Vec<Notes>,
     timing_points: Vec<TimingPoint>,
-) -> BTreeMap<i32, crate::mania::structs::ManiaMeasure> {
+) -> BTreeMap<i32, ManiaMeasure> {
     let mut measures = BTreeMap::new();
 
     for note in notes {
@@ -63,14 +67,14 @@ pub(crate) fn group_notes_by_measures(
         let measure_idx = ((note.timestamp - start_time) as f32 / beat_len).floor() as i32;
         let measure_start_time = start_time + (measure_idx as f32 * beat_len) as i32;
 
-        let measure_entry = measures.entry(measure_start_time).or_insert_with(|| crate::mania::structs::ManiaMeasure {
-            measure: crate::structs::CommonMeasure {
+        let measure_entry = measures.entry(measure_start_time).or_insert_with(|| ManiaMeasure {
+            measure: CommonMeasure {
                 start_time: measure_start_time,
                 npm: 0,
             },
             notes: Vec::new(),
-            secondary_pattern: crate::mania::structs::SecondaryPattern::None,
-            tertiary_pattern: crate::mania::structs::TertiaryPattern::None,
+            secondary_pattern: SecondaryPattern::None,
+            tertiary_pattern: TertiaryPattern::None,
         });
 
 

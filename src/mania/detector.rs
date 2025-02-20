@@ -1,10 +1,10 @@
-use crate::mania::structs::{BasePattern, ManiaMeasure, SecondaryPattern, TertiaryPattern};
+
 use std::collections::{BTreeMap, HashMap};
-use crate::mania::structs::TertiaryPattern::JT;
+use crate::mania::structs::{BasePattern, ManiaMeasure, Notes, SecondaryPattern, TertiaryPattern};
+use crate::mania::structs::TertiaryPattern::{JT, SINGLESTREAM};
 
-pub(crate) fn detect_primary_pattern_4k(note: &crate::mania::structs::Notes) -> BasePattern {
+pub(crate) fn detect_primary_pattern_4k(note: &Notes) -> BasePattern {
     let count = note.notes.iter().filter(|&&n| n).count();
-
     fn get_pattern(number: usize) -> BasePattern {
         match number {
             1 => BasePattern::Single,
@@ -20,13 +20,8 @@ pub(crate) fn detect_primary_pattern_4k(note: &crate::mania::structs::Notes) -> 
 
 pub(crate) fn analyze_patterns_by_measures_advanced(
     grouped_measures: &mut BTreeMap<i32, ManiaMeasure>,
-) -> HashMap<String, f64>
-{
-    let mut pattern_counts: HashMap<String, f64> = HashMap::new();
-    pattern_counts.insert("Jack".to_string(), 0.0);
-    pattern_counts.insert("Jumpstream".to_string(), 0.0);
-    pattern_counts.insert("Singlestream".to_string(), 0.0);
-    pattern_counts.insert("Handstream".to_string(), 0.0);
+) -> HashMap<SecondaryPattern, f64> {
+    let mut pattern_counts = HashMap::with_capacity(4);
 
     let measure_count = grouped_measures.len();
     let average_npm = grouped_measures
@@ -35,60 +30,41 @@ pub(crate) fn analyze_patterns_by_measures_advanced(
         .sum::<f64>()
         / measure_count.max(1) as f64;
 
-    let amplification_power: f64 = 1.0;
-
     for measure in grouped_measures.values_mut() {
         let weight = if average_npm > 0.0 {
-            (measure.measure.npm as f64 / average_npm).powf(amplification_power)
+            (measure.measure.npm as f64 / average_npm)
         } else {
             1.0
         };
 
-        let mut has_jack = false;
-        let mut has_jumpstream = false;
-        let mut has_singlestream = false;
-        let mut has_handstream = false;
+        let pattern = if measure.notes.windows(2).any(|w| {
+            w[0].notes.iter().zip(w[1].notes.iter()).any(|(p, n)| *p && *n)
+        }) {
+            SecondaryPattern::Jack
+        } else if measure.notes.iter().any(|n| matches!(n.pattern, BasePattern::Hand)) {
+            SecondaryPattern::Handstream
+        } else if measure.notes.iter().any(|n| matches!(n.pattern, BasePattern::Jump)) {
+            SecondaryPattern::Jumpstream
+        } else if measure.notes.iter().any(|n| matches!(n.pattern, BasePattern::Single)) {
+            SecondaryPattern::Singlestream
+        } else {
+            SecondaryPattern::None
+        };
 
-        for (i, note) in measure.notes.iter().enumerate() {
-            if i > 0 {
-                let prev = &measure.notes[i - 1];
-                if note.notes.iter().zip(prev.notes.iter()).any(|(n, p)| *n && *p) {
-                    has_jack = true;
-                }
-            }
-
-            match note.pattern {
-                BasePattern::Hand => has_handstream = true,
-                BasePattern::Jump => has_jumpstream = true,
-                BasePattern::Single => has_singlestream = true,
-                _ => {}
-            }
-        }
-
-        if has_jack {
-            *pattern_counts.get_mut("Jack").unwrap() += weight;
-            measure.secondary_pattern = SecondaryPattern::Jack;
-        } else if has_handstream {
-            *pattern_counts.get_mut("Handstream").unwrap() += weight;
-            measure.secondary_pattern = SecondaryPattern::Handstream;
-        } else if has_jumpstream {
-            *pattern_counts.get_mut("Jumpstream").unwrap() += weight;
-            measure.secondary_pattern = SecondaryPattern::Jumpstream;
-        } else if has_singlestream {
-            *pattern_counts.get_mut("Singlestream").unwrap() += weight;
-            measure.secondary_pattern = SecondaryPattern::Singlestream;
+        if pattern != SecondaryPattern::None {
+            measure.secondary_pattern = pattern.clone();
+            *pattern_counts.entry(pattern).or_insert(0.0) += weight;
         }
     }
 
     pattern_counts
 }
 
-
 pub(crate) fn analyze_patterns_tertiary(
     grouped_measures: &mut BTreeMap<i32, ManiaMeasure>,
     key: i32,
-) -> BTreeMap<TertiaryPattern, f64> {
-    let mut map: BTreeMap<TertiaryPattern, f64> = BTreeMap::new();
+) -> HashMap<TertiaryPattern, f64> {
+    let mut map: HashMap<TertiaryPattern, f64> = HashMap::with_capacity(8);
     let measure_count = grouped_measures.len();
     let average_npm = grouped_measures
         .values()
@@ -105,22 +81,23 @@ pub(crate) fn analyze_patterns_tertiary(
             1.0
         };
 
-        if measure.secondary_pattern == SecondaryPattern::Jack {
-            let key = check_jack(measure);
-            measure.tertiary_pattern = key.clone();
-            *map.entry(key).or_insert(0.0) += density_factor;
+        let key = match measure.secondary_pattern {
+            SecondaryPattern::Jack => {
+                let key = check_jack(measure);
+                measure.tertiary_pattern = key.clone();
+                key
+            }
+            SecondaryPattern::Jumpstream => {
+                let key = check_js(measure);
+                measure.tertiary_pattern = key.clone();
+                key
+            }
+            SecondaryPattern::Handstream => check_hs(measure),
+            SecondaryPattern::Singlestream => SINGLESTREAM,
+            _ => continue,
+        };
 
-        } else if measure.secondary_pattern == SecondaryPattern::Jumpstream {
-            let key = check_js(measure);
-            measure.tertiary_pattern = key.clone();
-            *map.entry(key).or_insert(0.0) += density_factor;
-
-        }
-        else if measure.secondary_pattern==SecondaryPattern::Handstream{
-            let key = check_hs(measure);
-            *map.entry(key).or_insert(0.0) += density_factor;
-        }
-
+        *map.entry(key).or_insert(0.0) += density_factor;
     }
 
     map

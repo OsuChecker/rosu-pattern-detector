@@ -1,5 +1,6 @@
 use std::fmt;
 use serde::ser::{Serialize, Serializer};
+use crate::structs::CommonMeasure;
 
 #[derive(Debug, Clone)]
 pub struct Notes {
@@ -25,7 +26,7 @@ pub enum BasePattern {
     None,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone,Hash,Eq)]
 pub enum SecondaryPattern
 {
     Jack,
@@ -61,6 +62,7 @@ pub enum TertiaryPattern
     ANCHOR_HS,
     DENSE_HS,
     HS,
+    SINGLESTREAM,
     None,
 }
 impl fmt::Display for TertiaryPattern {
@@ -79,6 +81,7 @@ impl fmt::Display for TertiaryPattern {
             TertiaryPattern::DENSE_HS => write!(f, "Dense HS"),
             TertiaryPattern::HS => write!(f, "HS"),
             TertiaryPattern::None => write!(f, "None"),
+            TertiaryPattern::SINGLESTREAM => write!(f, "Singlestream"),
         }
     }
 }
@@ -93,7 +96,7 @@ impl Serialize for TertiaryPattern {
 
 #[derive(Debug)]
 pub struct ManiaMeasure {
-    pub(crate) measure: crate::structs::CommonMeasure,
+    pub(crate) measure: CommonMeasure,
     pub(crate) notes: Vec<Notes>,
     pub(crate) secondary_pattern: SecondaryPattern,
     pub(crate) tertiary_pattern: TertiaryPattern,
