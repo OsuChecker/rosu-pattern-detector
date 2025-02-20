@@ -1,10 +1,9 @@
 mod structs;
-mod mania;
+pub mod mania;
 mod std;
 mod taiko;
-mod calc;
+pub mod calc;
+pub mod utils;
 
-use ::std::error::Error;
-use reqwest::blocking;
 use rosu_map;
-use rosu_map::Beatmap;
+use ::std::error::Error;

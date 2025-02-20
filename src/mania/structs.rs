@@ -1,5 +1,3 @@
-use std::fmt;
-use serde::ser::{Serialize, Serializer};
 use crate::structs::CommonMeasure;
 
 #[derive(Debug, Clone)]
@@ -23,84 +21,70 @@ pub enum BasePattern {
     Hand,
     Quad,
     Chord,
-    None,
+    None
 }
 
 #[derive(Debug, PartialEq, Clone,Hash,Eq)]
 pub enum SecondaryPattern
 {
-    Jack,
-    Handstream,
-    Jumpstream,
-    Singlestream,
+    Jack(JackPattern),
+    Handstream(HandstreamPattern),
+    Jumpstream(JumpstreamPattern),
+    Singlestream(SinglestreamPattern),
     None,
 }
-impl fmt::Display for SecondaryPattern {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+#[derive(Debug, PartialEq, Clone, Hash, Eq)]
+pub enum JackPattern {
+    Chordjack,
+    DenseChordjack,
+    ChordStream,
+    Speedjack,
+    All,
+}
+
+#[derive(Debug, PartialEq, Clone, Hash, Eq)]
+pub enum JumpstreamPattern {
+    LightJs,
+    AnchorJs,
+    JS,
+    JT,
+    All,
+}
+#[derive(Debug, PartialEq, Clone, Hash, Eq)]
+pub enum HandstreamPattern {
+    LightHs,
+    AnchorHs,
+    DenseHs,
+    HS,
+    All,
+}
+
+#[derive(Debug, PartialEq, Clone, Hash, Eq)]
+pub enum SinglestreamPattern {
+    Singlestream,
+    All,
+}
+
+impl SecondaryPattern {
+    pub fn to_all(&self) -> SecondaryPattern {
         match self {
-            SecondaryPattern::Jumpstream => write!(f, "JS"),
-            SecondaryPattern::Jack => write!(f, "Jack"),
-            SecondaryPattern::Handstream => write!(f, "HS"),
-            SecondaryPattern::Singlestream => write!(f, "SS"),
-            SecondaryPattern::None => write!(f, "None"),
+            SecondaryPattern::Jack(_) => SecondaryPattern::Jack(JackPattern::All),
+            SecondaryPattern::Handstream(_) => SecondaryPattern::Handstream(HandstreamPattern::All),
+            SecondaryPattern::Jumpstream(_) => SecondaryPattern::Jumpstream(JumpstreamPattern::All),
+            SecondaryPattern::Singlestream(_) => SecondaryPattern::Singlestream(SinglestreamPattern::All),
+            SecondaryPattern::None => SecondaryPattern::None,
         }
     }
 }
 
-#[derive(Debug, Hash, PartialEq, Ord, Eq, Clone, PartialOrd)]
-pub enum TertiaryPattern
-{
-    DENSE_CHORDJACK,
-    CHORDJACK,
-    SPEEDJACK,
-    CHORDSTREAM,
-    LIGHT_JS,
-    ANCHOR_JS,
-    JS,
-    JT,
-    LIGHT_HS,
-    ANCHOR_HS,
-    DENSE_HS,
-    HS,
-    SINGLESTREAM,
-    None,
-}
-impl fmt::Display for TertiaryPattern {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            TertiaryPattern::DENSE_CHORDJACK => write!(f, "Dense Chordjack"),
-            TertiaryPattern::CHORDJACK => write!(f, "Chordjack"),
-            TertiaryPattern::SPEEDJACK => write!(f, "Speedjack"),
-            TertiaryPattern::CHORDSTREAM => write!(f, "ChordStream"),
-            TertiaryPattern::LIGHT_JS => write!(f, "Light JS"),
-            TertiaryPattern::ANCHOR_JS => write!(f, "Anchor JS"),
-            TertiaryPattern::JS => write!(f, "JS"),
-            TertiaryPattern::JT => write!(f, "JT"),
-            TertiaryPattern::ANCHOR_HS => write!(f, "Anchor HS"),
-            TertiaryPattern::LIGHT_HS => write!(f, "Light HS"),
-            TertiaryPattern::DENSE_HS => write!(f, "Dense HS"),
-            TertiaryPattern::HS => write!(f, "HS"),
-            TertiaryPattern::None => write!(f, "None"),
-            TertiaryPattern::SINGLESTREAM => write!(f, "Singlestream"),
-        }
-    }
-}
-impl Serialize for TertiaryPattern {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(&self.to_string())
-    }
-}
 
 #[derive(Debug)]
 pub struct ManiaMeasure {
     pub(crate) measure: CommonMeasure,
     pub(crate) notes: Vec<Notes>,
     pub(crate) secondary_pattern: SecondaryPattern,
-    pub(crate) tertiary_pattern: TertiaryPattern,
 }
+
 impl ManiaMeasure {
     pub(crate) fn notes(&self) -> &Vec<Notes> {
         &self.notes
@@ -113,8 +97,7 @@ impl ManiaMeasure {
         }
     }
 
-    pub fn tNotes(&self) -> i32
-    {
+    pub fn tNotes(&self) -> i32 {
         self.notes
             .iter()
             .flat_map(|v| v.notes.iter())
@@ -122,6 +105,13 @@ impl ManiaMeasure {
             .count() as i32
     }
 
+    // Helper pour accéder aux détails spécifiques si nécessaire
+    pub fn get_jack_pattern(&self) -> Option<&JackPattern> {
+        match &self.secondary_pattern {
+            SecondaryPattern::Jack(pattern) => Some(pattern),
+            _ => None,
+        }
+    }
 }
 
 

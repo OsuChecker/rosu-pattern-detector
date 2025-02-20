@@ -1,10 +1,10 @@
+use crate::mania::detector::detect_primary_pattern_4k;
+use crate::mania::structs::{BasePattern, ManiaMeasure, Notes, SecondaryPattern};
+use crate::structs::CommonMeasure;
 use rosu_map;
 use rosu_map::section::hit_objects::{HitObject, HitObjectKind};
 use rosu_map::section::timing_points::TimingPoint;
 use std::collections::BTreeMap;
-use crate::mania::detector::detect_primary_pattern_4k;
-use crate::mania::structs::{BasePattern, ManiaMeasure, Notes, SecondaryPattern, TertiaryPattern};
-use crate::structs::CommonMeasure;
 
 pub(crate) fn transform_hit_object_to_mania_notes(
     ho: Vec<HitObject>,
@@ -74,7 +74,6 @@ pub(crate) fn group_notes_by_measures(
             },
             notes: Vec::new(),
             secondary_pattern: SecondaryPattern::None,
-            tertiary_pattern: TertiaryPattern::None,
         });
 
 
