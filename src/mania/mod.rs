@@ -4,7 +4,6 @@ use crate::mania::transform::{group_notes_by_measures, transform_hit_object_to_m
 use rosu_map::section::timing_points::TimingPoint;
 use rosu_map::Beatmap;
 use std::collections::{BTreeMap, HashMap};
-use std::hash::Hash;
 pub mod structs;
 pub mod detector;
 pub mod transform;

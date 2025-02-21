@@ -31,7 +31,7 @@ pub(crate) fn analyze_patterns_by_measures_advanced(
 
     for measure in grouped_measures.values_mut() {
         let weight = if average_npm > 0.0 {
-            (measure.measure.npm as f64 / average_npm)
+            measure.measure.npm as f64 / average_npm
         } else {
             1.0
         };
