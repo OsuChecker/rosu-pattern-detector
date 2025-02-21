@@ -4,7 +4,7 @@ use eyre;
 use rosu_map::section::general::GameMode::Mania;
 use rosu_map::Beatmap;
 use std::collections::HashMap;
-pub(crate) fn get_patterns(path: &str) -> eyre::Result<(HashMap<SecondaryPattern, f64>)> {
+pub(crate) fn get_patterns(path: &str) -> eyre::Result<HashMap<SecondaryPattern, f64>> {
     let map = rosu_map::from_path::<Beatmap>(&path)?;
     match map.mode
     {

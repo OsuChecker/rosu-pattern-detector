@@ -25,7 +25,7 @@ pub fn detect_secondary_pattern(measures: &mut BTreeMap<i32, StdMeasure>) -> Has
     // On calcule d'abord les distances moyennes de chaque mesure dans un vecteur.
     let average_distances: Vec<f64> = measures
         .values()
-        .map(|m| calc_average_distance_speed_ratio(m))
+        .map(calc_average_distance_speed_ratio)
         .collect();
 
 
