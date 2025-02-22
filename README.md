@@ -1,9 +1,12 @@
+# **Rosu Pattern Dtector**
 
-# OUTDATED I NEED TO UPDATE IT DONT READ IT
-
-# **osu! Pattern Detector**
-
-`pdetector` is a Rust-based library designed to analyze patterns in osu! beatmaps. It currently supports **osu!mania** mode exclusively, focusing on detecting specific **secondary patterns** such as **Jack**, **Jumpstream**, **Singlestream**, and **Handstream**. While osu!mania is the only mode supported right now, the project intends to evolve into a universal tool for analyzing all osu! game modes.
+`rosu-pattern-detector` is a Rust-based library designed to analyze patterns in osu! beatmaps.
+It currently supports **osu!mania** mode exclusively,
+focusing on detecting specific **secondary patterns** such as **Jack**, **Jumpstream**, **Singlestream**, and *
+*Handstream**,
+and tertiary patterns see mania::struct for more info.
+While osu!mania is the only mode supported right now, the project intends to evolve into a universal tool for analyzing
+all osu! game modes.
 
 ---
 
@@ -15,7 +18,40 @@
     - Jumpstream
     - Singlestream
     - Handstream
-- **Extensible Design**:
+
+
+- **Tertiary Pattern Analysis**:
+
+### Jack Patterns
+
+- Chordjack
+- DenseChordjack
+- ChordStream
+- Speedjack
+- All
+
+### Jumpstream Patterns
+
+- LightJs
+- AnchorJs
+- JS
+- JT
+- All
+
+### Handstream Patterns
+
+- LightHs
+- AnchorHs
+- DenseHs
+- HS
+- All
+
+### Singlestream Patterns
+
+- Singlestream
+- All
+
+**Extensible Design**:
     - Although limited to osu!mania for now, the library is structured for future extension to other osu! game modes (osu!standard, taiko, catch) and more advanced patterns.
 
 ---
@@ -29,34 +65,12 @@ Add the library and its dependencies to your `Cargo.toml` file:
 ```toml
 [dependencies]
 rosu-map = "0.2.0"
-serde = "1.0"
-serde_json = "1.0"
-pyo3 = "0.20.3"
-reqwest = "0.12.12"
+serde = { version = "1.0.217", features = ["derive"] }
+serde_json = "1.0.137"
+eyre = "0.6.12"
 ```
 
 ---
-
-## **Usage Examples**
-
-### **Python Usage**
-
-You can use the library in Python via the bundled PyO3 bindings. The example below demonstrates how to analyze an osu!mania beatmap for secondary patterns.
-
-**Code**:
-
-```python
-import pdetector
-
-# Example URL for downloading an osu!mania map
-url = "https://example.com/path/to/osu/map.osu"
-
-# Analyze the beatmap and retrieve detected patterns
-result = pdetector.get_map(url)
-
-# Display the detected patterns in JSON format
-print(result)
-```
 
 **Example JSON Output**:
 
@@ -68,58 +82,6 @@ print(result)
   "handstream": 5.4
 }
 ```
-
----
-
-### **Rust Usage**
-
-You can use the library directly in Rust to analyze beatmaps.
-
-**Code**:
-
-```rust
-use pdetector::{get_map, download_file};
-
-fn main() {
-    let url = "https://example.com/path/to/osu/map.osu";
-
-    // Download and analyze an osu!mania beatmap
-    match download_file(url) {
-        Ok(data) => {
-            let results = get_map(&data).unwrap();
-            println!("JSON Results: {}", results);
-        }
-        Err(e) => println!("Error: {}", e),
-    }
-}
-```
-
-After running the above Rust program, the detected patterns will be printed as JSON.
-
----
-
-## **How It Works**
-
-The library analyzes an osu!mania beatmap in the following steps:
-
-1. **Get the Beatmap**:
-    - The `.osu` file is downloaded from the provided URL using the `reqwest` crate.
-
-2. **Transform Objects**:
-    - The hit objects of the `.osu` file are mapped to internal representations specific to osu!mania.
-
-3. **Group Notes into Measures**:
-    - Notes per measure are grouped for precise analysis based on timings and patterns.
-
-4. **Secondary Pattern Detection**:
-    - Rules are applied to detect secondary patterns:
-        - **Jack**: Repeated notes in the same column.
-        - **Jumpstream**: Consecutive "jumps."
-        - **Singlestream**: Uninterrupted single-note sequences.
-        - **Handstream**: Alternating dense streams.
-
-5. **JSON Results**:
-    - The detected values of each pattern type are compiled into a JSON object.
 
 ---
 
@@ -139,10 +101,7 @@ The library analyzes an osu!mania beatmap in the following steps:
     - Add compatibility for osu!standard, taiko, and catch.
 
 - **Advanced Patterns**:
-    - Expand functionality to cover more complex and tertiary-level patterns.
-
-- **Custom Pattern Configurations**:
-    - Allow users to define and detect customized patterns.
+    - Expand functionality to cover more complex patterns.
 
 - **Performance Optimizations**:
     - Improve computation speed for large and complex maps.

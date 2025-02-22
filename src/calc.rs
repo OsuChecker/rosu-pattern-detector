@@ -11,7 +11,7 @@ pub(crate) fn get_patterns(path: &str) -> eyre::Result<HashMap<SecondaryPattern,
         Mania => {
             Ok(mania::transformers(map))
         },
-        _ => Err(eyre::eyre!("Unsupported game mode."))
+        _ => Err(eyre::eyre!("Unsupported game mode for now."))
     }
 }
 
