@@ -1,6 +1,6 @@
 [package]
 name = "rosu-pattern-detector"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Osef0760 <osefcode@gmail.com>"]
 description = "Pattern detector for osu!"
