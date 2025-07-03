@@ -1,7 +1,7 @@
-use crate::mania::structs::SecondaryPattern;
+use crate::mania::models::pattern::Pattern;
 use std::collections::HashMap;
 
-pub fn max_values(patterns: &HashMap<SecondaryPattern, f64>) -> Vec<(SecondaryPattern, f64)> {
+pub fn max_values(patterns: &HashMap<Pattern, f64>) -> Vec<(Pattern, f64)> {
     let mut result = Vec::new();
     if patterns.is_empty() {
         return result;
@@ -25,15 +25,15 @@ pub fn max_values(patterns: &HashMap<SecondaryPattern, f64>) -> Vec<(SecondaryPa
 }
 
 
-pub fn sum_by_secondary_type(patterns: &HashMap<SecondaryPattern, f64>) -> HashMap<SecondaryPattern, f64> {
-    let mut sums: HashMap<SecondaryPattern, f64> = HashMap::new();
+pub fn sum_by_secondary_type(patterns: &HashMap<Pattern, f64>) -> HashMap<Pattern, f64> {
+    let mut sums: HashMap<Pattern, f64> = HashMap::new();
     for (pattern, &value) in patterns {
         *sums.entry(pattern.to_all()).or_insert(0.0) += value;
     }
     sums
 }
 
-pub fn max_by_secondary_type(patterns: &HashMap<SecondaryPattern, f64>) -> Vec<(SecondaryPattern, f64)> {
+pub fn max_by_secondary_type(patterns: &HashMap<Pattern, f64>) -> Vec<(Pattern, f64)> {
     let sums = sum_by_secondary_type(patterns);
 
     let mut sorted: Vec<_> = sums.into_iter().collect();

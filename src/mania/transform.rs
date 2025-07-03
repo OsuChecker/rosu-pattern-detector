@@ -1,5 +1,5 @@
-use crate::mania::detector::detect_primary_pattern_4k;
-use crate::mania::structs::{BasePattern, ManiaMeasure, Notes, SecondaryPattern};
+use crate::mania::models::base::{ManiaMeasure, NotesStruct};
+use crate::mania::models::pattern::Pattern;
 use crate::structs::CommonMeasure;
 use rosu_map;
 use rosu_map::section::hit_objects::{HitObject, HitObjectKind};
@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 pub(crate) fn transform_hit_object_to_mania_notes(
     ho: Vec<HitObject>,
     num_keys: i32,
-) -> Vec<Notes> {
+) -> Vec<NotesStruct> {
     let num_keys = num_keys as usize;
     let positions = match num_keys {
         4 => vec![64.0, 192.0, 320.0, 448.0],
@@ -33,23 +33,18 @@ pub(crate) fn transform_hit_object_to_mania_notes(
         for &key_index in &indices {
             keys[key_index] = true;
         }
-        let temporary_note = Notes {
+        let temporary_note = NotesStruct {
             timestamp,
             notes: keys.clone(),
-            pattern: BasePattern::None,
         };
-        notes_vec.push(Notes {
-            timestamp,
-            notes: keys,
-            pattern: detect_primary_pattern_4k(&temporary_note),
-        });
+        notes_vec.push(temporary_note);
     }
     notes_vec
 }
 
 
 pub(crate) fn group_notes_by_measures(
-    notes: Vec<Notes>,
+    notes: Vec<NotesStruct>,
     timing_points: Vec<TimingPoint>,
 ) -> BTreeMap<i32, ManiaMeasure> {
     let mut measures = BTreeMap::new();
@@ -73,7 +68,8 @@ pub(crate) fn group_notes_by_measures(
                 npm: 0,
             },
             notes: Vec::new(),
-            secondary_pattern: SecondaryPattern::None,
+            pattern: Pattern::None,
+            value: 0.0,
         });
 
 

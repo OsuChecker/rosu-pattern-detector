@@ -8,8 +8,8 @@ version = "0.6.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7cd915d99f24784cdc19fd37ef22b97e3ff0ae756c7e492e9fbfe897d61e2aec"
 dependencies = [
-    "indenter",
-    "once_cell",
+ "indenter",
+ "once_cell",
 ]
 
 [[package]]
@@ -62,12 +62,12 @@ checksum = "21de4f8c5cd2738e1c9a2ed477aad2579dacd5acf3845d80738fcec160d0bd8a"
 
 [[package]]
 name = "rosu-pattern-detector"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
-    "eyre",
-    "rosu-map",
-    "serde",
-    "serde_json",
+ "eyre",
+ "rosu-map",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
