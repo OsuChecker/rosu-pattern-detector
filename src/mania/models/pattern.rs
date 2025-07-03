@@ -23,6 +23,19 @@ impl Pattern {
     }
 }
 
+impl std::fmt::Display for Pattern {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let pattern = match self {
+            Pattern::Jack(pattern) => pattern.to_string(),
+            Pattern::Handstream(pattern) => pattern.to_string(),
+            Pattern::Jumpstream(pattern) => pattern.to_string(),
+            Pattern::Singlestream(_) => "SingleStream".to_string(),
+            Pattern::None => return write!(f, "None"),
+        };
+        write!(f, "{}", pattern)
+    }
+}
+
 #[derive(Debug, PartialEq, Clone, Hash, Eq)]
 pub enum JackPattern {
     Chordjack,
@@ -71,6 +84,16 @@ impl JackPattern {
             JackPattern::ChordStream
         } else {
             JackPattern::Speedjack
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        match self {
+            JackPattern::Chordjack => "Chordjack".to_string(),
+            JackPattern::DenseChordjack => "DenseChordjack".to_string(),
+            JackPattern::ChordStream => "ChordStream".to_string(),
+            JackPattern::Speedjack => "Speedjack".to_string(),
+            JackPattern::All => "All".to_string(),
         }
     }
 }
@@ -139,6 +162,16 @@ impl JumpstreamPattern {
             JumpstreamPattern::JS
         }
     }
+
+    pub fn to_string(&self) -> String {
+        match self {
+            JumpstreamPattern::LightJs => "LightJs".to_string(),
+            JumpstreamPattern::AnchorJs => "AnchorJs".to_string(),
+            JumpstreamPattern::JS => "JS".to_string(),
+            JumpstreamPattern::JT => "JT".to_string(),
+            JumpstreamPattern::All => "All".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Hash, Eq)]
@@ -166,10 +199,61 @@ impl HandstreamPattern {
             HandstreamPattern::HS
         }
     }
+
+    pub fn to_string(&self) -> String {
+        match self {
+            HandstreamPattern::LightHs => "LightHs".to_string(),
+            HandstreamPattern::AnchorHs => "AnchorHs".to_string(),
+            HandstreamPattern::DenseHs => "DenseHs".to_string(),
+            HandstreamPattern::HS => "HS".to_string(),
+            HandstreamPattern::All => "All".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Hash, Eq)]
 pub enum SinglestreamPattern {
     Singlestream,
     All,
+}
+// Used to calculate the weight of a pattern
+// Problem is vibro or jumptrill have way HIGHER NPM as a base so map could be detected wrongfully
+pub fn get_pattern_weight(pattern: &Pattern) -> f64 {
+    match pattern {
+        // Jack patterns
+        Pattern::Jack(jack_type) => match jack_type {
+            JackPattern::DenseChordjack => 0.8,
+            JackPattern::Speedjack => 0.9,
+            JackPattern::Chordjack => 1.0,
+            JackPattern::ChordStream => 1.1,
+            JackPattern::All => 1.0,
+        },
+        
+        // Handstream patterns
+        Pattern::Handstream(hs_type) => match hs_type {
+            HandstreamPattern::DenseHs => 0.8,
+            HandstreamPattern::AnchorHs => 1.1,
+            HandstreamPattern::HS => 1.0,
+            HandstreamPattern::LightHs => 1.1,
+            HandstreamPattern::All => 1.0,
+        },
+        
+        // Jumpstream patterns
+        Pattern::Jumpstream(js_type) => match js_type {
+            JumpstreamPattern::JT => 0.7,
+            JumpstreamPattern::AnchorJs => 1.1,
+            JumpstreamPattern::JS => 1.0,
+            JumpstreamPattern::LightJs => 1.1,
+            JumpstreamPattern::All => 1.0,
+        },
+        
+        // Singlestream patterns
+        Pattern::Singlestream(ss_type) => match ss_type {
+            SinglestreamPattern::Singlestream => 1.1,
+            SinglestreamPattern::All => 1.0,
+        },
+        
+        // None
+        Pattern::None => 0.0,
+    }
 }

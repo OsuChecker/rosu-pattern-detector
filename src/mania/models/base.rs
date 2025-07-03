@@ -1,5 +1,5 @@
 use crate::structs::CommonMeasure;
-use crate::mania::models::pattern::Pattern;
+use crate::mania::models::pattern::{Pattern, get_pattern_weight};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Notes {
@@ -46,9 +46,23 @@ pub struct ManiaMeasure {
 }
 
 impl ManiaMeasure {
+
+    pub fn get_weight(&self, average_npm: f64) -> f64 {
+        match (self.measure.npm, average_npm) {
+            (npm, avg) if avg <= 0.0 => if npm > 0 { 1.0 } else { 0.0 },
+            (npm, _) if npm <= 0 => 0.0,
+            (npm, avg) => (npm as f64 / avg).clamp(0.0, 5.0), // Vibro or Jumptrill (could cause severe inflation)
+        }
+    }
+
+    pub fn get_pattern_weight_modifier(&self, average_npm: f64) -> f64 {
+        self.get_weight(average_npm)*get_pattern_weight(&self.pattern)
+    }
+
     pub fn detect_pattern(&mut self) -> Pattern {
         if self.has_jack_pattern() {
             Pattern::Jack(self.determine_jack_type())
+            
         } else if self.has_hand_notes() {
             Pattern::Handstream(self.determine_handstream_type())
         } else if self.has_jump_notes() {
@@ -62,7 +76,10 @@ impl ManiaMeasure {
 
     fn has_jack_pattern(&self) -> bool {
         self.notes.windows(2).any(|w| {
-            w[0].get_pattern() == Notes::Single && w[1].get_pattern() == Notes::Jump
+            // Vérifie si une même colonne est activée dans deux notes consécutives
+            w[0].notes.iter()
+                .zip(w[1].notes.iter())
+                .any(|(&prev, &curr)| prev && curr)
         })
     }
 

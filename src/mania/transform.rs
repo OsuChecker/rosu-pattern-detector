@@ -4,7 +4,8 @@ use crate::structs::CommonMeasure;
 use rosu_map;
 use rosu_map::section::hit_objects::{HitObject, HitObjectKind};
 use rosu_map::section::timing_points::TimingPoint;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap}   ;
+use crate::mania::detector::HitObjects;
 
 pub(crate) fn transform_hit_object_to_mania_notes(
     ho: Vec<HitObject>,
@@ -46,8 +47,8 @@ pub(crate) fn transform_hit_object_to_mania_notes(
 pub(crate) fn group_notes_by_measures(
     notes: Vec<NotesStruct>,
     timing_points: Vec<TimingPoint>,
-) -> BTreeMap<i32, ManiaMeasure> {
-    let mut measures = BTreeMap::new();
+) -> HitObjects {
+    let mut measures = HitObjects(HashMap::new());
 
     for note in notes {
         let timing_point = timing_points
@@ -62,7 +63,7 @@ pub(crate) fn group_notes_by_measures(
         let measure_idx = ((note.timestamp - start_time) as f32 / beat_len).floor() as i32;
         let measure_start_time = start_time + (measure_idx as f32 * beat_len) as i32;
 
-        let measure_entry = measures.entry(measure_start_time).or_insert_with(|| ManiaMeasure {
+        let measure_entry = measures.0.entry(measure_start_time).or_insert_with(|| ManiaMeasure {
             measure: CommonMeasure {
                 start_time: measure_start_time,
                 npm: 0,

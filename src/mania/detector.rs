@@ -1,51 +1,62 @@
 use crate::mania::models::base::ManiaMeasure;
-use crate::mania::models::base::{NotesStruct, Notes};
-use crate::mania::models::pattern::{Pattern, JackPattern, HandstreamPattern, JumpstreamPattern, SinglestreamPattern};
-use std::collections::{BTreeMap, HashMap};
+use crate::mania::models::pattern::Pattern;
+use std::collections::HashMap;
 
+// needed for the analyzer in order to do calc on it
+// i32 is the timestamp of the start of the measure
+// ManiaMeasure is the measure of the hit object
+pub struct HitObjects(pub HashMap<i32, ManiaMeasure>);
 
+pub struct PatternsValues(HashMap<Pattern, f64>);
 
-pub(crate) fn analyze_patterns_by_measures_advanced(
-    grouped_measures: &mut BTreeMap<i32, ManiaMeasure>,
-) -> HashMap<Pattern, f64> {
+impl std::fmt::Display for PatternsValues {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "PatternsValues {{")?;
+        for (pattern, value) in self.0.iter() {
+            write!(f, "{}: {}, ", pattern, value)?;
+        }
+        write!(f, "}}")
+    }
+}
+impl PatternsValues {
+    fn add_pattern(&mut self, pattern: Pattern, value: f64) {
+        *self.0.entry(pattern).or_insert(0.0) += value;
+    }
     
-    let mut pattern_counts = HashMap::with_capacity(4);
+    pub fn ordered_print(&self) {
+        let mut sorted: Vec<(Pattern, f64)> = self.0.iter()
+            .map(|(pattern, &value)| (pattern.clone(), value))
+            .collect();
+        sorted.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        
+        println!("Patterns (sorted by value):");
+        for (pattern, value) in sorted {
+            println!("  {:?}: {:.2}", pattern, value);
+        }
+    }
+}
 
-    let measure_count = grouped_measures.len();
-    let average_npm = grouped_measures
-        .values()
-        .map(|measure| measure.measure.npm as f64)
-        .sum::<f64>()
-        / measure_count.max(1) as f64;
-
-    for measure in grouped_measures.values_mut() {
-        let weight = if average_npm > 0.0 {
-            measure.measure.npm as f64 / average_npm
-        } else {
-            1.0
-        };
-
-        let pattern = {
-            if measure.notes.windows(2).any(|w| {
-                w[0].get_pattern() == Notes::Single && w[1].get_pattern() == Notes::Jump
-            }) {
-                Pattern::Jack(JackPattern::determine_jack_type(measure))
-            } else if measure.notes.iter().any(|n| n.get_pattern() == Notes::Hand) {
-                Pattern::Handstream(HandstreamPattern::determine_hs_type(measure))
-            } else if measure.notes.iter().any(|n| n.get_pattern() == Notes::Jump) {
-                Pattern::Jumpstream(JumpstreamPattern::determine_js_type(measure))
-            } else if measure.notes.iter().any(|n| n.get_pattern() == Notes::Single) {
-                Pattern::Singlestream(SinglestreamPattern::Singlestream)
-            } else {
-                Pattern::None
-            }
-        };
-
-
-        measure.pattern = pattern.clone();
-        *pattern_counts.entry(pattern).or_insert(0.0) += weight;
-
+impl HitObjects {
+    pub fn get_npm(&self) -> f64 {
+        self.0.values().map(|measure| measure.measure.npm as f64).sum::<f64>() / self.0.len() as f64
     }
 
-    pattern_counts
+    pub fn get_patterns_values(&self) -> PatternsValues {
+        let mut patterns = PatternsValues(HashMap::new());
+        for (_, measure) in self.0.iter() {
+            patterns.add_pattern(measure.pattern.clone(), measure.value);        
+        }
+        patterns
+    }
+}
+
+
+pub(crate) fn analyze_patterns(hit_objects: &mut HitObjects)
+{
+    let average_npm = hit_objects.get_npm();
+
+    for (_, measure) in hit_objects.0.iter_mut() {
+        measure.pattern = measure.detect_pattern();
+        measure.value = measure.get_pattern_weight_modifier(average_npm);
+    }
 }
