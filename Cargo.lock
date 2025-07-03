@@ -62,7 +62,7 @@ checksum = "21de4f8c5cd2738e1c9a2ed477aad2579dacd5acf3845d80738fcec160d0bd8a"
 
 [[package]]
 name = "rosu-pattern-detector"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "eyre",
  "rosu-map",
