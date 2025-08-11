@@ -7,7 +7,7 @@ use std::collections::HashMap;
 // ManiaMeasure is the measure of the hit object
 pub struct HitObjects(pub HashMap<i32, ManiaMeasure>);
 
-pub struct PatternsValues(HashMap<Pattern, f64>);
+pub struct PatternsValues(pub HashMap<Pattern, f64>);
 
 impl std::fmt::Display for PatternsValues {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -1,6 +1,6 @@
 [package]
 name = "rosu-pattern-detector"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 authors = ["Osef0760 <osefcode@gmail.com>"]
 description = "Pattern detector for osu!"
@@ -10,6 +10,14 @@ documentation = "https://docs.rs/rosu-pattern-detector"
 readme = "README.md"
 keywords = ["osu", "gaming", "pattern-detection", "rhythm-game"]
 categories = ["games", "algorithms"]
+
+[lib]
+name = "rosu_pattern_detector"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rosu-pattern-detector"
+path = "src/main.rs"
 
 [dependencies]
 rosu-map = "0.2.0"
